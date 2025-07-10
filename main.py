@@ -32,7 +32,10 @@ def send_telegram_message(message):
 def get_balance():
     timestamp = str(int(time.time() * 1000))
     method = "GET"
-    request_path = "/api/mix/v1/account/accounts?productType=USDT_PERPETUAL"
+
+    base_path = "/api/mix/v1/account/accounts"
+    query_string = "?productType=USDT_PERPETUAL"
+    request_path = base_path + query_string
     url = BASE_URL + request_path
 
     signature = generate_signature(timestamp, method, request_path, "")
@@ -46,9 +49,10 @@ def get_balance():
     }
 
     response = requests.get(url, headers=headers)
+
     if response.status_code == 200:
-        data = response.json()
         try:
+            data = response.json()
             usdt_balance = float(data['data'][0]['available'])
             return usdt_balance
         except Exception as e:
