@@ -11,16 +11,26 @@ PASSPHRASE = "sodlfmaruddms1"
 def get_timestamp():
     return str(int(time.time() * 1000))
 
-def sign_request(timestamp, method, request_path, body=""):
-    prehash = f"{timestamp}{method.upper()}{request_path}{body}"
-    signature = hmac.new(SECRET_KEY.encode('utf-8'), prehash.encode('utf-8'), hashlib.sha256).hexdigest()
+def sign_request(timestamp, method, request_path, body=None):
+    if body:
+        message = f"{timestamp}{method.upper()}{request_path}{body}"
+    else:
+        message = f"{timestamp}{method.upper()}{request_path}"
+
+    signature = hmac.new(
+        SECRET_KEY.encode("utf-8"),
+        message.encode("utf-8"),
+        hashlib.sha256
+    ).hexdigest()
+
     return signature
 
 def get_usdt_balance():
     timestamp = get_timestamp()
     method = "GET"
     request_path = "/api/mix/v1/account/accounts?productType=USDT-FUTURES"
-    url = f"https://api.bitget.com{request_path}"
+    url = "https://api.bitget.com" + request_path
+
     sign = sign_request(timestamp, method, request_path)
 
     headers = {
@@ -41,6 +51,6 @@ def get_usdt_balance():
         print("❌ 오류 발생:", response.text)
         return 0
 
-# 테스트
+# 실행
 balance = get_usdt_balance()
 print("현재 잔고:", balance)
