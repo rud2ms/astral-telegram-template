@@ -2,29 +2,28 @@ import requests
 import time
 import hmac
 import hashlib
-import os
+import json
 
-# 환경변수에서 불러오기
-API_KEY = os.getenv("API_KEY")
-SECRET_KEY = os.getenv("SECRET_KEY")
-PASSPHRASE = os.getenv("PASSPHRASE")
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
+# 비트겟 API 키
+API_KEY = "bg_80625110d7152ca34ef7b5a63d0a1e9c"
+SECRET_KEY = "47c8862d0c869f978d06deaa95f08ca4aff54c74f9a71bd84a53d27412a2ed14"
+PASSPHRASE = "sodlfmaruddms1"
 
-def send_telegram_message(message):
+# 텔레그램
+TELEGRAM_TOKEN = "8121549228:AAH3Yqipscnr5rnsY0eFCDHSATC9FfU9qa0"
+CHAT_ID = "7909031883"
+
+def send_telegram_message(msg):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    data = {"chat_id": CHAT_ID, "text": message}
-    try:
-        requests.post(url, data=data)
-    except Exception as e:
-        print(f"텔레그램 전송 오류: {e}")
+    data = {"chat_id": CHAT_ID, "text": msg}
+    requests.post(url, data=data)
 
 def get_timestamp():
     return str(int(time.time() * 1000))
 
 def sign_request(timestamp, method, request_path, body=""):
     message = f"{timestamp}{method.upper()}{request_path}{body}"
-    signature = hmac.new(SECRET_KEY.encode(), message.encode(), hashlib.sha256).hexdigest()
+    signature = hmac.new(SECRET_KEY.encode('utf-8'), message.encode('utf-8'), hashlib.sha256).hexdigest()
     return signature
 
 def get_usdt_balance():
@@ -32,31 +31,38 @@ def get_usdt_balance():
     method = "GET"
     request_path = "/api/mix/v1/account/accounts?productType=USDT-FUTURES"
     url = "https://api.bitget.com" + request_path
+    body = ""  # GET 요청은 body가 반드시 빈 문자열이어야 함
+
     headers = {
         "ACCESS-KEY": API_KEY,
-        "ACCESS-SIGN": sign_request(timestamp, method, request_path),
+        "ACCESS-SIGN": sign_request(timestamp, method, request_path, body),
         "ACCESS-TIMESTAMP": timestamp,
         "ACCESS-PASSPHRASE": PASSPHRASE,
         "Content-Type": "application/json"
     }
 
-    try:
-        response = requests.get(url, headers=headers)
-        res_json = response.json()
-        if res_json.get("code") == "00000":
-            balance = res_json["data"][0]["marginBalance"]
-            return float(balance)
-        else:
-            send_telegram_message(f"[오류] 잔고 조회 실패: {res_json.get('msg')}")
-            return None
-    except Exception as e:
-        send_telegram_message(f"[예외] 잔고 조회 중 오류 발생: {e}")
-        return None
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        data = response.json()
+        balance = float(data['data'][0]['marginBalance'])
+        return balance
+    else:
+        send_telegram_message(f"[ASTRAL 오류] 잔고 조회 실패: {response.status_code} - {response.text}")
+        return 0
 
-# 루프 실행
-if __name__ == "__main__":
-    while True:
-        balance = get_usdt_balance()
-        if balance is not None:
-            send_telegram_message(f"[ASTRAL_EXEC] 현재 잔고: {balance} USDT")
-        time.sleep(3600)
+# 전략 루프
+while True:
+    send_telegram_message("🚀 ASTRAL EXEC 전략 루프 시작됨")
+    send_telegram_message("루프 실행 중: Step 1")
+    send_telegram_message("루프 실행 중: Step 2")
+    send_telegram_message("루프 실행 중: Step 3")
+
+    balance = get_usdt_balance()
+
+    if balance > 1:
+        send_telegram_message(f"✅ 잔고: {balance} USDT")
+    else:
+        send_telegram_message(f"⚠️ 현재 잔고 부족 또는 오류. {balance} USDT")
+
+    send_telegram_message("✅ 전략 루프 종료됨\n")
+    time.sleep(3600)
