@@ -14,9 +14,9 @@ TG_TOKEN = os.getenv("TG_TOKEN")
 TG_USER_ID = os.getenv("TG_USER_ID")
 BASE_URL = "https://api.bitget.com"
 
-def generate_signature(timestamp, method, request_path, body):
-    message = f"{timestamp}{method}{request_path}{body}"
-    mac = hmac.new(API_SECRET.encode('utf-8'), message.encode('utf-8'), digestmod="sha256")
+def generate_signature(timestamp, method, request_path, query_string, body=""):
+    message = f"{timestamp}{method}{request_path}{query_string}{body}"
+    mac = hmac.new(API_SECRET.encode(), message.encode(), digestmod="sha256")
     return base64.b64encode(mac.digest()).decode()
 
 def send_telegram_message(message):
@@ -25,20 +25,20 @@ def send_telegram_message(message):
         "chat_id": TG_USER_ID,
         "text": message
     }
-    response = requests.post(url, json=data)
-    if not response.ok:
-        print("텔레그램 전송 실패:", response.text)
+    try:
+        requests.post(url, json=data)
+    except Exception as e:
+        print("텔레그램 전송 실패:", e)
 
 def get_balance():
     timestamp = str(int(time.time() * 1000))
     method = "GET"
-
-    base_path = "/api/mix/v1/account/accounts"
+    path = "/api/mix/v1/account/accounts"
     query_string = "?productType=USDT_PERPETUAL"
-    request_path = base_path + query_string
+    request_path = path + query_string
     url = BASE_URL + request_path
 
-    signature = generate_signature(timestamp, method, request_path, "")
+    signature = generate_signature(timestamp, method, path, query_string)
 
     headers = {
         "ACCESS-KEY": API_KEY,
@@ -49,7 +49,6 @@ def get_balance():
     }
 
     response = requests.get(url, headers=headers)
-
     if response.status_code == 200:
         try:
             data = response.json()
