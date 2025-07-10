@@ -20,25 +20,22 @@ def generate_signature(timestamp, method, request_path, body):
     return signature
 
 # 잔고 조회 요청
-def get_balance():
-    method = "GET"
-    request_path = "/api/mix/v1/account/USDT_balance"
-    body = ""
-    timestamp = str(int(time.time() * 1000))
-    signature = generate_signature(timestamp, method, request_path, body)
+request_path = "/api/mix/v1/account/accounts?productType=USDT-FUTURES"
+method = "GET"
+body = ""
+timestamp = str(int(time.time() * 1000))
+signature = generate_signature(timestamp, method, request_path, body)
 
-    headers = {
-        "ACCESS-KEY": API_KEY,
-        "ACCESS-SIGN": signature,
-        "ACCESS-TIMESTAMP": timestamp,
-        "ACCESS-PASSPHRASE": PASSPHRASE,
-        "Content-Type": "application/json"
-    }
+headers = {
+    "ACCESS-KEY": API_KEY,
+    "ACCESS-SIGN": signature,
+    "ACCESS-TIMESTAMP": timestamp,
+    "ACCESS-PASSPHRASE": PASSPHRASE,
+    "Content-Type": "application/json"
+}
 
-    url = "https://api.bitget.com" + request_path
-    response = requests.get(url, headers=headers)
-    print("DEBUG:", response.text)
-    return response.json()
+url = "https://api.bitget.com" + request_path
+response = requests.get(url, headers=headers)
 
 # 테스트 실행
 if __name__ == "__main__":
