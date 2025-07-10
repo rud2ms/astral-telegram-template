@@ -1,57 +1,59 @@
-
-import os
 import requests
 import time
 import hmac
 import hashlib
+import os
+from dotenv import load_dotenv
 
-API_KEY = os.getenv("API_KEY")
-SECRET_KEY = os.getenv("SECRET_KEY")
-PASSPHRASE = os.getenv("PASSPHRASE")
+# 환경 변수 불러오기
+load_dotenv()
 
-BASE_URL = "https://api.bitget.com"
+# 비트겟 API 정보
+api_key = os.getenv("API_KEY")
+secret_key = os.getenv("SECRET_KEY")
+passphrase = os.getenv("PASSPHRASE")
 
-def get_timestamp():
-    return str(int(time.time() * 1000))
+# 텔레그램 설정
+telegram_token = os.getenv("TELEGRAM_TOKEN")
+chat_id = os.getenv("CHAT_ID")
+
+def send_telegram_message(message):
+    url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
+    data = {"chat_id": chat_id, "text": message}
+    requests.post(url, data=data)
 
 def sign_request(timestamp, method, request_path, body=""):
-    message = f"{timestamp}{method.upper()}{request_path}{body}"
-    signature = hmac.new(SECRET_KEY.encode(), message.encode(), hashlib.sha256).hexdigest()
+    message = f'{timestamp}{method.upper()}{request_path}{body}'
+    signature = hmac.new(secret_key.encode('utf-8'),
+                         message.encode('utf-8'),
+                         hashlib.sha256).hexdigest()
     return signature
 
-def get_futures_balance():
-    path = "/api/mix/v1/account/accounts?productType=USDT-FUTURES"
-    timestamp = get_timestamp()
-    sign = sign_request(timestamp, "GET", path)
-
+def get_headers(method, request_path, body=""):
+    timestamp = str(int(time.time() * 1000))
+    signature = sign_request(timestamp, method, request_path, body)
     headers = {
-        "ACCESS-KEY": API_KEY,
-        "ACCESS-SIGN": sign,
-        "ACCESS-TIMESTAMP": timestamp,
-        "ACCESS-PASSPHRASE": PASSPHRASE,
-        "Content-Type": "application/json"
+        'ACCESS-KEY': api_key,
+        'ACCESS-SIGN': signature,
+        'ACCESS-TIMESTAMP': timestamp,
+        'ACCESS-PASSPHRASE': passphrase,
+        'Content-Type': 'application/json'
     }
+    return headers
 
-    url = BASE_URL + path
+def get_usdt_balance():
+    method = "GET"
+    request_path = "/api/mix/v1/account/accounts?productType=USDT-FUTURES"
+    url = "https://api.bitget.com" + request_path
+    headers = get_headers(method, request_path)
     response = requests.get(url, headers=headers)
-    print("DEBUG:", response.text)
 
     if response.status_code == 200:
         data = response.json()
-        if data["code"] == "00000":
-            usdt_balance = next((item for item in data["data"] if item["marginCoin"] == "USDT"), None)
-            if usdt_balance:
-                return float(usdt_balance["available"])
-            else:
-                return 0.0
-        else:
-            raise Exception(f"잔고 조회 실패: {data}")
+        balance = data['data'][0]['marginBalance']
+        send_telegram_message(f"[ASTRAL] 현재 잔고는 {balance} USDT입니다.")
     else:
-        raise Exception(f"HTTP 오류: {response.status_code} - {response.text}")
+        send_telegram_message(f"[오류] 잔고 조회 실패: {response.text}")
 
-if __name__ == "__main__":
-    try:
-        balance = get_futures_balance()
-        print(f"현재 USDT 선물 잔고: {balance}")
-    except Exception as e:
-        print("[ASTRAL 오류]", e)
+# 실행
+get_usdt_balance()
