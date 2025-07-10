@@ -77,4 +77,4 @@ def run_strategy_loop():
 
 if __name__ == "__main__":
     run_strategy_loop()
-    enter_trade()  # ✅ 실거래 진입 함수
+    enter_trade()
