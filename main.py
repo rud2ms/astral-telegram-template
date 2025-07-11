@@ -36,7 +36,7 @@ def get_balance():
     timestamp = str(int(time.time() * 1000))
     method = "GET"
     path = "/api/mix/v1/account/accounts"
-    query = f"?productType={PRODUCT_TYPE}"  # 여기도 반드시 포함돼야 함
+    query = f"?productType={PRODUCT_TYPE}"
     request_path = path + query
     url = BASE_URL + request_path
 
@@ -53,8 +53,12 @@ def get_balance():
     try:
         response = requests.get(url, headers=headers)
         data = response.json()
-        usdt_balance = float(data['data'][0]['available'])
-        return usdt_balance
+        if data.get("data") and isinstance(data["data"], list) and len(data["data"]) > 0:
+            usdt_balance = float(data["data"][0]["available"])
+            return usdt_balance
+        else:
+            print("❌ 응답 데이터 이상 또는 잔고 없음:", data)
+            return 0.0
     except Exception as e:
         print("잔고 조회 실패:", e)
         return 0.0
